@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "Scene": {
+      "title": "Scene",
+      "description": "User's saved projection configuration.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "User ID of the creator."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the scene."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "The AI prompt used to generate the image."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "The generated background image URL or base64."
+        },
+        "effectMode": {
+          "type": "string",
+          "enum": ["reveal", "particles", "ripples"]
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Motion sensitivity threshold."
+        },
+        "objects": {
+          "type": "array",
+          "description": "List of placed 3D objects in the scene.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "libraryObjectId": { "type": "string" },
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "scale": { "type": "number" }
+            }
+          }
+        },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["ownerId", "name", "effectMode"]
+    },
+    "LibraryObject": {
+      "title": "LibraryObject",
+      "description": "A reusable 3D object for the projection engine.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the 3D model/object." },
+        "modelUrl": { "type": "string", "description": "URL to the GLTF/GLB or 3D asset." },
+        "thumbnailUrl": { "type": "string", "description": "Thumbnail image of the object." },
+        "category": { "type": "string", "description": "Category like 'sci-fi', 'nature', 'cyberpunk'." },
+        "creatorId": { "type": "string", "description": "User ID of the person who uploaded this." },
+        "createdAt": { "type": "number" }
+      },
+        "required": ["name", "modelUrl", "creatorId"]
+    }
+  },
+  "firestore": {
+    "/scenes/{sceneId}": {
+      "schema": { "$ref": "#/entities/Scene" },
+      "description": "Saved scenes belonging to users."
+    },
+    "/library_objects/{objectId}": {
+      "schema": { "$ref": "#/entities/LibraryObject" },
+      "description": "Global collection of reusable 3D objects."
+    }
+  }
+}

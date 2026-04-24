@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} { 
+      allow read, write: if false; 
+    }
+
+    function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+
+    function isValidScene(data) {
+      return data.keys().hasAll(['ownerId', 'name', 'effectMode', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && data.name is string && data.name.size() <= 200
+        && (data.get('prompt', '') is string) && (data.get('prompt', '').size() <= 5000)
+        && (data.get('imageUrl', '') is string) && (data.get('imageUrl', '').size() <= 900000)
+        && data.effectMode in ['reveal', 'particles', 'ripples']
+        && (data.get('threshold', 0) is number)
+        && (data.get('objects', []) is list) && data.get('objects', []).size() <= 100
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function isValidSceneUpdate() {
+      let data = incoming();
+      return data.name is string && data.name.size() <= 200
+        && (data.get('prompt', '') is string) && (data.get('prompt', '').size() <= 5000)
+        && (data.get('imageUrl', '') is string) && (data.get('imageUrl', '').size() <= 900000)
+        && data.effectMode in ['reveal', 'particles', 'ripples']
+        && (data.get('threshold', 0) is number)
+        && (data.get('objects', []) is list) && data.get('objects', []).size() <= 100
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    match /scenes/{sceneId} {
+      allow get: if isVerified() && existing().ownerId == request.auth.uid;
+      allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(sceneId) && isValidScene(incoming()) && incoming().keys().size() <= 8;
+      allow update: if isVerified() && existing().ownerId == request.auth.uid
+                    && isValidSceneUpdate()
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'prompt', 'imageUrl', 'effectMode', 'threshold', 'objects', 'updatedAt']);
+      allow delete: if isVerified() && existing().ownerId == request.auth.uid;
+    }
+
+    function isValidLibraryObject(data) {
+      return data.keys().hasAll(['name', 'modelUrl', 'creatorId', 'createdAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.modelUrl is string && data.modelUrl.size() > 0 && data.modelUrl.size() <= 2000
+        && (data.get('thumbnailUrl', '') is string) && (data.get('thumbnailUrl', '').size() <= 2000)
+        && (data.get('category', '') is string) && (data.get('category', '').size() <= 50)
+        && data.creatorId == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    match /library_objects/{objectId} {
+      allow get: if isVerified();
+      allow list: if isVerified();
+      allow create: if isVerified() && isValidId(objectId) && isValidLibraryObject(incoming()) && incoming().keys().size() <= 6;
+      allow update: if false; // immutable once uploaded for now
+      allow delete: if isVerified() && existing().creatorId == request.auth.uid;
+    }
+  }
+}

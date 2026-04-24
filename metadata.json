@@ -1,0 +1,9 @@
+{
+  "name": "Projector Floor Piano",
+  "description": "An interactive floor piano designed to be projected onto a surface. Uses your webcam to detect motion over the keys and trigger sounds.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": []
+}
